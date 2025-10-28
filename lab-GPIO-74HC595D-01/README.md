@@ -1,0 +1,3 @@
+Simple GPIO for 74HC595D project 
+
+Use simple loop to display on 4 digits Led Display (74HC595D) via GPIO
