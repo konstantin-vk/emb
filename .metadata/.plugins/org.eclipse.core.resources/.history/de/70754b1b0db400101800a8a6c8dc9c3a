@@ -1,0 +1,6 @@
+Simple GPIO for 74HC595D project 
+
+Use simple loop to display on LCD (74HC595D) via GPIO
+Show 4 digits.
+
+

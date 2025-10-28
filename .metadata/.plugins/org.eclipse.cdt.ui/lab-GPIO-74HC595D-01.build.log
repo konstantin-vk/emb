@@ -1,0 +1,17 @@
+22:17:55 **** Incremental Build of configuration Debug for project lab-GPIO-74HC595D-01 ****
+make -j12 all 
+arm-none-eabi-gcc "../Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DSTM32F401CCUx -DSTM32 -DSTM32F4 -c -I../Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Src/main.d" -MT"Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Src/main.o"
+arm-none-eabi-gcc -o "lab-GPIO-74HC595D-01.elf" @"objects.list"   -mcpu=cortex-m4 -T"/home/konstantin/Documents/project/emb/lab-GPIO-74HC595D-01/STM32F401CCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="lab-GPIO-74HC595D-01.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: lab-GPIO-74HC595D-01.elf
+ 
+arm-none-eabi-size  lab-GPIO-74HC595D-01.elf 
+arm-none-eabi-objdump -h -S lab-GPIO-74HC595D-01.elf  > "lab-GPIO-74HC595D-01.list"
+   text	   data	    bss	    dec	    hex	filename
+   1260	      4	   1564	   2828	    b0c	lab-GPIO-74HC595D-01.elf
+Finished building: default.size.stdout
+ 
+Finished building: lab-GPIO-74HC595D-01.list
+ 
+
+22:17:55 Build Finished. 0 errors, 0 warnings. (took 135ms)
+
