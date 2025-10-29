@@ -24,14 +24,15 @@
 
 /**************************************************/
 #include <stdint.h>
+#include <FourDigitsLedDisplay.h>
 
 
 
 #define BITLOW  0
 #define BITHIGH 1
 
-#define LEDON   0
-#define LEDOFF  1
+//#define LEDON   0
+//#define LEDOFF  1
 
 #define PIN_DATA 			2		//SDO
 #define PIN_SHIFT_CLOCK 	1		//SCLK
@@ -46,37 +47,41 @@ void write_storage_clock__(uint8_t low_high);
 void delay(uint32_t);
 
 
+
 // GPIOA_ODR = 0x40020000UL + 0x14UL. Pin0=0,1=1,2=2;
 volatile uint32_t *pGPIOAOdr = (uint32_t *)(0x40020000UL + 0x14UL);
 // GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
 volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
 
 
+static GPIOToLedRegisterDefinition_t  *g_ledOutput;
+
+
+
 
 int main(void)
 {
+
 	init();
-
-	simulate_once(LEDOFF);
-	delay(5000);
-	simulate_once(LEDON);
-	delay(5000);
-	simulate_once(LEDOFF);
-	delay(5000);
-	simulate_once(LEDON);
-	delay(5000);
-
     /* Loop forever */
+	uint32_t i = 9999;
 	for(;;)
 	{
-		//simulate_once(LEDOFF);
-		//delay(5000);
-		//simulate_once(LEDOFF);
-		//delay(5000);
-		//simulate_once(LEDOFF);
-		//delay(5000);
-		//simulate_once(LEDOFF);
-		//delay(5000);
+		//for (uint32_t i = 9999; i>=0; i--)
+		//{
+		//	gpiotoled_blast_uint(i);
+		//	delay(500000);
+		//}
+		gpiotoled_blast_uint(i);
+		delay(500000);
+		i--;
+		if (i <= 0) i=9999;
+		//gpiotoled_clear();
+		//gpiotoled_blast_uint(1234);
+		//delay(500000);
+		//gpiotoled_bright();
+		//gpiotoled_blast_uint(5678);
+		//delay(500000);
 	};
 }
 
@@ -112,6 +117,17 @@ void init(void)
 	*pGPIOAPuPd |= ~(0b010101); //set 01: Pull-up
 	// GPIOA_ODR = 0x40020000UL + 0x14UL. Pin0=0,1=1,2=2;
 	// GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
+
+	// GPIOA_ODR = 0x40020000UL + 0x14UL. Pin0=0,1=1,2=2;
+	//volatile uint32_t *pGPIOAOdr = (uint32_t *)(0x40020000UL + 0x14UL);
+
+	// GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
+	volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
+	g_ledOutput = gpiotoled_init();
+	g_ledOutput->pGPIOABSRR = pGPIOABSRR;
+	g_ledOutput->output_pin_data = PIN_DATA;
+	g_ledOutput->output_pin_shift_clock = PIN_SHIFT_CLOCK;
+	g_ledOutput->output_pin_storage_clock = PIN_STORAGE_CLOCK;
 }
 
 /**********************************************************************/
