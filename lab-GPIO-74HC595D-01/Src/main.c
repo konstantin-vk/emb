@@ -67,21 +67,10 @@ int main(void)
 	uint32_t i = 9999;
 	for(;;)
 	{
-		//for (uint32_t i = 9999; i>=0; i--)
-		//{
-		//	gpiotoled_blast_uint(i);
-		//	delay(500000);
-		//}
 		gpiotoled_blast_uint(i);
 		delay(500000);
 		i--;
 		if (i <= 0) i=9999;
-		//gpiotoled_clear();
-		//gpiotoled_blast_uint(1234);
-		//delay(500000);
-		//gpiotoled_bright();
-		//gpiotoled_blast_uint(5678);
-		//delay(500000);
 	};
 }
 
@@ -130,62 +119,11 @@ void init(void)
 	g_ledOutput->output_pin_storage_clock = PIN_STORAGE_CLOCK;
 }
 
-/**********************************************************************/
-void simulate_once(uint8_t all_low_high)
-{
-	/***************************************/
-	/* template for loo
-	 *
-	 */
-	write_storage_clock__(BITLOW);
-
-	// 1
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-	// 2
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-	// 3
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-	// 4
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-	// 5
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-	// 6
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-	// 7
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-	// 8
-	write_shift_clock__(BITLOW);
-	write_bit__(all_low_high);
-	write_shift_clock__(BITHIGH);
-
-
-	write_storage_clock__(BITHIGH);
-}
-
-
-
-/**********************************************************************/
+/*
+ * **********************************************************************
+ * Deprecated/ Replaced by FourDigitsLedDisplay.h
+ *
+ * *********************************************************************/
 void write_pin___(uint8_t pin, uint8_t low_high)
 {
 	if      (low_high==BITLOW ){ *pGPIOABSRR |= (0b1 << (16 + pin));} // reset

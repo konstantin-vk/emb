@@ -34,9 +34,10 @@ const uint8_t char_map_bitfield_err    = 0b11111111UL ; 	// indicate error as al
 const uint8_t char_map_bitfield_clear  = 0b00000000UL ;
 const uint8_t char_map_bitfield_bright = 0b01111111UL ;
 
-
+// Convert Numbers to Led Display pin signal level
+const uint8_t char_map[10] =
+{
 	/////////////////////
-	// Convert Numbers to Led Display pin signal level
 	// PINS :
 	//   __1__
 	//  6| 7 |2
@@ -44,8 +45,6 @@ const uint8_t char_map_bitfield_bright = 0b01111111UL ;
 	//  5|___|3   . 8
 	//     4
 	/////////////////////
-const uint8_t char_map[10] =
-{
     // 87654321 = pins
     0b00111111UL,         /*0*/
     0b00000110UL,         /*1*/
