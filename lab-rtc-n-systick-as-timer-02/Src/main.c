@@ -23,7 +23,7 @@
 #endif
 
 
-#include <FourDigitsLedDisplay.h>
+#include <FourDigitsLedDisplay2.h>
 
 
 #define PIN_DATA 			2		//SDO
@@ -34,9 +34,10 @@
 static GPIOToLedRegisterDefinition_t  *g_ledOutput;
 
 
-
+void enable_processor_faults(void);
 void init_rtc(void);
 void init_systick(void);
+void init_pendSV(void);
 void init_GPIO(void);
 void init_GPIO_FourDigitsLed(void);
 void delay(uint32_t);
@@ -47,37 +48,27 @@ uint32_t g_tick = 0;
 
 int main(void)
 {
+	enable_processor_faults();
 	init_systick();
 	init_rtc();
 	init_GPIO();
 	init_GPIO_FourDigitsLed();
+	init_pendSV();
     /* Loop forever */
 
-	// Reduce flickering
-	//uint32_t prev_displayed_mm = 0;
-	//uint32_t prev_displayed_ss = 0;
-	for(;;)
-	{
-		uint32_t current_tick = g_tick;
-
-		uint32_t ss = (current_tick / 1000U) % 60;
-		uint32_t mm = (current_tick / 1000U) / 60;
-
-		gpiotoled_blast_time(mm, ss);
-
-
-		//if (prev_displayed_ss != ss || prev_displayed_mm != mm)
-		//{
-		//	gpiotoled_blast_time(mm, ss);
-		//	prev_displayed_ss = ss;
-		//	prev_displayed_mm = mm;
-		//}
-		delay(500000);
-	};
+	for(;;);
 }
 
 
 
+void enable_processor_faults(void)
+{
+	uint32_t *pSHCSR = (uint32_t*)0xE000ED24;
+
+	*pSHCSR |= ( 1 << 16); //mem manage
+	*pSHCSR |= ( 1 << 17); //bus fault
+	*pSHCSR |= ( 1 << 18); //usage fault
+}
 
 void init_systick(void)
 {
@@ -86,7 +77,7 @@ void init_systick(void)
 	uint32_t *pSystRVR = (uint32_t*)0xE000E014;
 	// Internal RC = 16 MHz
 	// 1mz = 1 KHz =Timer count MHz / Reload value = 16 MHz / Reload value. Reload value = 16 MHz/1 KHz = 16 000 = 0x3E80
-	*pSystRVR = 0x00FFFFFFU & 16000U; // add safety mask for 8 upper bits (24 bit register)
+	*pSystRVR = 0x00FFFFFFU & (16000U-1U); // add safety mask for 8 upper bits (24 bit register)
 
 	//Clear current value. SYST_CVR
 	//0xE000E018 SYST_CVR
@@ -104,6 +95,15 @@ void init_systick(void)
 	*pSystCSR |= (0x1U<<2); // CLKSOURCE [2]=1 Processor clock \ internal
 	*pSystCSR |= (0x1U<<1); // TICKINT [1]= 1 counting down to zero asserts the SysTick exception request.
 	*pSystCSR |= (0x1U<<0); // ENABLE [0]=1 Enable
+
+
+	// SysTick Handler priority
+	//SHPR3 System handler priority register 3  Address: 0xE000 ED20
+	uint32_t *pSHPR3 = (uint32_t *)0xE000ED20;
+	//PRI_15: Priority of system handler 15, SysTick exception
+	*pSHPR3 &= ~(0xFF << 24); 		// clear
+	*pSHPR3 |=  (0x10 << 24); 		// set priority 1 - lowest ? 0xF0 or 0xFF ?
+
 }
 void init_rtc(void)
 {
@@ -149,11 +149,37 @@ void init_GPIO_FourDigitsLed (void)
 
 	// GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
 	//volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
-	g_ledOutput = gpiotoled_init();
+	g_ledOutput = gpiotoled2_init();
 	g_ledOutput->pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL); //pGPIOABSRR;
 	g_ledOutput->output_pin_data = PIN_DATA;
 	g_ledOutput->output_pin_shift_clock = PIN_SHIFT_CLOCK;
 	g_ledOutput->output_pin_storage_clock = PIN_STORAGE_CLOCK;
+}
+
+void init_pendSV(void)
+{
+	// Set priority
+	//SHPR3 bit Bits 23:16 PRI_14: Priority of system handler 14, PendSV Bits 15:0 Reserved, must be kept cleared
+	uint32_t *pSHPR3 = (uint32_t *)0xE000ED20;
+	*pSHPR3 &= ~(0xFF << 16); 	// clear
+	//*pSHPR3 |= (15 << 16); 		// set priority 15 - lowest
+	*pSHPR3 |= (0xF0 << 16); 		// set priority 15 - lowest ? 0xF0 or 0xFF ?
+
+	// AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  DONT DO THIS
+	//usage fault "Attempt to do exception with bad value in EXEC_RETURN number (INVPC)" while calling PendSV
+	// IDIOT - this is the ACTIVE(!) bit, not ENABLE (!)
+	//Enable PendSV
+	//SHCSR Address offset: 0x24 0xE000ED24 Bit 10 PENDSVACT: PendSV exception active bit, reads as 1 if exception is active
+	//uint32_t *pSHCSR = (uint32_t *)0xE000ED24;
+	//*pSHCSR |= (1<<10); 		// Enable PendSV
+
+}
+
+
+void delay(uint32_t time)
+{
+	for (uint32_t i =0 ; i< time; i++);
+
 }
 
 
@@ -162,20 +188,51 @@ void init_GPIO_FourDigitsLed (void)
 void SysTick_Handler(void)
 {
 	g_tick++;
+	gpiotoled2_set_millis(g_tick);
+
+	//SCB. Interrupt control and state register (ICSR)
+	//Address offset: 0x04
+	//Bit 28 PENDSVSET: PendSV set-pending bit.
+	volatile uint32_t *pICSR = (uint32_t *)0xE000ED04;
+	*pICSR |= (0x1<<28);  // set PENDSVSET call PendSV handler
 }
 
 /**********************************************************************/
-void delay(uint32_t time)
-{
-	for (uint32_t i =0 ; i< time; i++);
-}
 
 
 
 
 void PendSV_Handler(void)
 {
-
+	gpiotoled2_update_screen();
 }
 
 
+
+
+
+//2. implement the fault handlers
+void HardFault_Handler(void)
+{
+	printf("Exception : Hardfault\n");
+	while(1);
+}
+
+
+void MemManage_Handler(void)
+{
+	printf("Exception : MemManage\n");
+	while(1);
+}
+
+void BusFault_Handler(void)
+{
+	printf("Exception : BusFault\n");
+	while(1);
+}
+
+void UsageFault_Handler(void)
+{
+	printf("Exception : UsageFault\n");
+	while(1);
+}

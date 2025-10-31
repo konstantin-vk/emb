@@ -8,20 +8,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "FourDigitsLedDisplay.h"
-
-
-/*
- * **************************
- * Global static = Singleton
- * address for output register and port numbers
- * **************************
- */
-static GPIOToLedRegisterDefinition_t *g_gpio_output_register;
-
-
-// supress flickering by supressing update scrin if displayed value hasnt changed
-static uint8_t displayed_bitfield[4];
+#include "FourDigitsLedDisplay2.h"
 
 
 /*
@@ -37,7 +24,7 @@ const uint8_t char_map_base = 48; 						// ASCII number for 0 (Zero)
 const uint8_t char_map_bitfield_err    = 0b11111111UL ; 	// indicate error as all leds are highlited
 const uint8_t char_map_bitfield_clear  = 0b00000000UL ;
 const uint8_t char_map_bitfield_bright = 0b01111111UL ;
-const uint8_t char_map_dotmask = 0b10000000UL ;
+const uint8_t char_map_dotmask 	       = 0b10000000UL ;
 
 // Convert Numbers to Led Display pin signal level
 const uint8_t char_map[10] =
@@ -62,6 +49,22 @@ const uint8_t char_map[10] =
     0b01111111UL,         /*8*/
     0b01101111UL          /*9*/
 } ;
+
+/*
+ * **************************
+ * Global static = Singleton
+ * address for output register and port numbers
+ * **************************
+ */
+static GPIOToLedRegisterDefinition_t *g_gpio_output_register;
+
+
+// supress flickering by supressing update scrin if displayed value hasnt changed
+static uint8_t displayed_bitfield[4];
+static uint8_t previous_bitfield[4] = {char_map_bitfield_clear
+						,char_map_bitfield_clear
+						,char_map_bitfield_clear
+						,char_map_bitfield_clear};
 
 
 
@@ -97,7 +100,7 @@ uint8_t char_map_translate_uint___(uint8_t num)
  * ***************************
  */
 
-GPIOToLedRegisterDefinition_t *gpiotoled_init (void)
+GPIOToLedRegisterDefinition_t *gpiotoled2_init (void)
 {
     // do lock here
     if(g_gpio_output_register == NULL)
@@ -107,7 +110,7 @@ GPIOToLedRegisterDefinition_t *gpiotoled_init (void)
 	return g_gpio_output_register;
 }
 
-void gpiotoled_deinit (void)
+void gpiotoled2_deinit (void)
 {
     // do lock here
     if(g_gpio_output_register != NULL)
@@ -157,48 +160,60 @@ void push_section_bitmap___(uint8_t bits )
 }
 
 
-// handle section invertion
-void push_four_section_bitmap_raw___(uint8_t bits_a , uint8_t bits_b ,uint8_t bits_c ,uint8_t bits_d)
+
+
+//void push_four_section_bitmap_raw___(uint8_t bits_a , uint8_t bits_b ,uint8_t bits_c ,uint8_t bits_d)
+//{
+//		//update screen
+//		push_section_bitmap___(bits_d);
+//		push_section_bitmap___(bits_c);
+//		push_section_bitmap___(bits_b);
+//		push_section_bitmap___(bits_a);
+//}
+
+
+// handle MSB should be first
+void push_four_section_bitmap_impl___(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
-		//update screen
-		push_section_bitmap___(bits_d);
-		push_section_bitmap___(bits_c);
-		push_section_bitmap___(bits_b);
-		push_section_bitmap___(bits_a);
+	push_section_bitmap___(d);
+	push_section_bitmap___(c);
+	push_section_bitmap___(b);
+	push_section_bitmap___(a);
 }
 
-
-//handle flickering
-void push_four_section_bitmap___(uint8_t bits_a , uint8_t bits_b ,uint8_t bits_c ,uint8_t bits_d)
+void push_four_section_bitmap___(void)
 {
 	//blast string
 	// Attention = inversion !!!!!!!!!!!!!!
 	// suppress flickering
-	if ( displayed_bitfield[0]!=bits_a ||
-			displayed_bitfield[1]!=bits_b ||
-			displayed_bitfield[2]!=bits_c ||
-			displayed_bitfield[3]!=bits_d )
+	if ( displayed_bitfield[0]!=previous_bitfield[0] ||
+			displayed_bitfield[1]!=previous_bitfield[1] ||
+			displayed_bitfield[2]!=previous_bitfield[2] ||
+			displayed_bitfield[3]!=previous_bitfield[3] )
 	{
 		//save
-		displayed_bitfield[0] = bits_a ;
-		displayed_bitfield[1] = bits_b ;
-		displayed_bitfield[2] = bits_c ;
-		displayed_bitfield[3] = bits_d ;
-		//update screen
-		push_four_section_bitmap_raw___(char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear);
-		push_four_section_bitmap_raw___(bits_a, bits_b, bits_c, bits_d);
+		previous_bitfield[0] = displayed_bitfield[0] ;
+		previous_bitfield[1] = displayed_bitfield[1] ;
+		previous_bitfield[2] = displayed_bitfield[2] ;
+		previous_bitfield[3] = displayed_bitfield[3] ;
+
+		// Update screen :
+		// Clear
+		push_four_section_bitmap_impl___(char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear);
+		// Show - MSB should be first
+		push_four_section_bitmap_impl___(displayed_bitfield[0],displayed_bitfield[1],displayed_bitfield[2],displayed_bitfield[3]);
 
 	}
 }
 
 void push_four_section_clear___(void)
 {
-	push_four_section_bitmap___(char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear);
+	push_four_section_bitmap_impl___(char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear);
 }
 
 void push_four_section_bright___(void)
 {
-	push_four_section_bitmap___(char_map_bitfield_bright, char_map_bitfield_bright, char_map_bitfield_bright, char_map_bitfield_bright);
+	push_four_section_bitmap_impl___(char_map_bitfield_bright,char_map_bitfield_bright,char_map_bitfield_bright,char_map_bitfield_bright);
 }
 
 
@@ -209,43 +224,6 @@ void push_four_section_bright___(void)
  */
 
 
-void blast_bitmap___(uint8_t bitmask_a , uint8_t bitmask_b ,uint8_t bitmask_c ,uint8_t bitmask_d)
-{
-	push_four_section_bitmap___(bitmask_a, bitmask_b, bitmask_c, bitmask_d);
-}
-
-
-void blast_ascii___(uint8_t ascii_a , uint8_t ascii_b ,uint8_t ascii_c ,uint8_t ascii_d)
-{
-	uint8_t bits_a = char_map_translate_ascii___(ascii_a);
-	uint8_t bits_b = char_map_translate_ascii___(ascii_b);
-	uint8_t bits_c = char_map_translate_ascii___(ascii_c);
-	uint8_t bits_d = char_map_translate_ascii___(ascii_d);
-	push_four_section_bitmap___(bits_a, bits_b, bits_c, bits_d);
-}
-
-void blast_uint___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint_d)
-{
-	uint8_t bits_a = char_map_translate_uint___(uint_a);
-	uint8_t bits_b = char_map_translate_uint___(uint_b);
-	uint8_t bits_c = char_map_translate_uint___(uint_c);
-	uint8_t bits_d = char_map_translate_uint___(uint_d);
-	push_four_section_bitmap___(bits_a, bits_b, bits_c, bits_d);
-}
-
-void blast_time___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint_d)
-{
-	uint8_t bits_a = char_map_translate_uint___(uint_a);
-	uint8_t bits_b = char_map_translate_uint___(uint_b);
-	bits_b |= char_map_dotmask;
-	uint8_t bits_c = char_map_translate_uint___(uint_c);
-	uint8_t bits_d = char_map_translate_uint___(uint_d);
-	push_four_section_bitmap___(bits_a, bits_b, bits_c, bits_d);
-}
-
-
-
-
 
 
 /*
@@ -254,7 +232,7 @@ void blast_time___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint
  * ************************************
  */
 
-void gpiotoled_clear(void)
+void gpiotoled2_clear(void)
 {
 //	for (int i=0; i<4;i++)  // 4 segments
 //	{
@@ -270,7 +248,7 @@ void gpiotoled_clear(void)
 }
 
 
-void gpiotoled_bright(void)
+void gpiotoled2_bright(void)
 {
 //	for (int i=0; i<4;i++)  // 4 segments
 //	{
@@ -286,14 +264,16 @@ void gpiotoled_bright(void)
 }
 
 
-void gpiotoled_blast_error(void)
+void gpiotoled2_blast_error(void)
 {
 	//gpiotoled_bright();
 	push_four_section_bright___();
 }
 
 
-void gpiotoled_blast_uint(uint32_t num)
+
+
+void gpioled2_set_uint(uint32_t num)
 {
     int dummy = num;
     uint8_t a,b,c,d;
@@ -305,21 +285,33 @@ void gpiotoled_blast_uint(uint32_t num)
     }
     else
     {
-        if (dummy>999)			{a = dummy/1000;dummy=dummy-(dummy/1000)*1000;}
+        if (dummy>999)
+        {
+        	displayed_bitfield[0] = char_map_translate_uint___(dummy/1000);
+        	dummy=dummy-(dummy/1000)*1000;
+        }
         else a = char_map_bitfield_clear; //TODO !!!! error - nomask but number
 
-        if (dummy>99 || num>=99)	{ b = dummy / 100; dummy=dummy-(dummy/100)*100;}
+        if (dummy>99 || num>=99)
+        {
+        	displayed_bitfield[1] = char_map_translate_uint___(dummy / 100);
+        	dummy=dummy-(dummy/100)*100;
+        }
         else b = char_map_bitfield_clear; //TODO !!!! error - nomask but number
 
-        if (dummy>9 || num>=9)	{ c= dummy/10;dummy=dummy-(dummy/10)*10;}
+        if (dummy>9 || num>=9)
+        {
+        	displayed_bitfield[2] = char_map_translate_uint___(dummy/10);
+        	dummy=dummy-(dummy/10)*10;
+        }
         else c = char_map_bitfield_clear; //TODO !!!! error - nomask but number
 
-        if (dummy>=0)			{ d = dummy;}
+        if (dummy>=0)
+        {
+        	displayed_bitfield[3] = char_map_translate_uint___(dummy);
+        }
         else d = char_map_bitfield_clear; //TODO !!!! error - nomask but number
     };
-
-	//gpiotoled_clear();
-	blast_uint___(a,b,c,d);
 
 
 }
@@ -328,33 +320,63 @@ void gpiotoled_blast_uint(uint32_t num)
 
 
 
-void gpiotoled_blast_time(uint8_t aa, uint8_t bb)
+void gpiotoled2_set_time(uint8_t aa, uint8_t bb)
 {
     int dummy;
     uint8_t a,b,c,d;
     if (aa>99 || aa<0 || bb>99 || bb<0)
     {
-    	gpiotoled_blast_error();
+    	gpiotoled2_blast_error();
     	return;
     }
     else
     {
     	dummy = aa;
-        if (dummy>9 || aa>=9)	{ a = dummy/10;dummy=dummy-(dummy/10)*10;}
+        if (dummy>9 || aa>=9)
+        {
+        	displayed_bitfield[0] = char_map_translate_uint___( dummy/10 );
+        	dummy=dummy-(dummy/10)*10;
+        }
         else a = 0;
-        if (dummy>=0)			{ b = dummy;}
+
+        if (dummy>=0)
+        {
+        	displayed_bitfield[1] = char_map_translate_uint___(dummy);
+        	displayed_bitfield[1] |= char_map_dotmask;
+        }
         else b = 0;
 
     	dummy = bb;
-        if (dummy>9 || bb>=9)	{ c = dummy/10;dummy=dummy-(dummy/10)*10;}
+        if (dummy>9 || bb>=9)
+        {
+        	displayed_bitfield[2] = char_map_translate_uint___(dummy/10);
+        	dummy=dummy-(dummy/10)*10;
+        }
         else c = 0;
-        if (dummy>=0)			{ d = dummy;}
+
+        if (dummy>=0)
+        {
+        	displayed_bitfield[3] = char_map_translate_uint___(dummy);
+        }
         else d = 0;
 
     };
-
-	blast_time___(a,b,c,d);
-
 }
 
 
+void gpiotoled2_set_millis(uint32_t millis)
+{
+	uint32_t ss = (millis / 1000U) % 60;
+	uint32_t mm = (millis / 1000U) / 60;
+
+	gpiotoled2_set_time(mm, ss);
+}
+
+
+
+
+
+void gpiotoled2_update_screen(void)
+{
+	push_four_section_bitmap___();
+}
