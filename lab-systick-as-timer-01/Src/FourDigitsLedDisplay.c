@@ -185,7 +185,7 @@ void push_four_section_bitmap___(uint8_t bits_a , uint8_t bits_b ,uint8_t bits_c
 		displayed_bitfield[2] = bits_c ;
 		displayed_bitfield[3] = bits_d ;
 		//update screen
-		push_four_section_bitmap___(char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear);
+		push_four_section_bitmap_raw___(char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear);
 		push_four_section_bitmap_raw___(bits_a, bits_b, bits_c, bits_d);
 
 	}
