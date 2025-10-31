@@ -28,8 +28,8 @@
 
 
 
-#define BITLOW  0
-#define BITHIGH 1
+//#define BITLOW  0
+//#define BITHIGH 1
 
 //#define LEDON   0
 //#define LEDOFF  1
@@ -39,21 +39,19 @@
 #define PIN_STORAGE_CLOCK 	0		//LOAD
 
 
-void init(void);
-void simulate_once(uint8_t all_low_high);
-void write_bit__(uint8_t low_high);
-void write_shift_clock__(uint8_t low_high);
-void write_storage_clock__(uint8_t low_high);
+void init_GPIO(void);
+void init_GPIO_FourDigitsLed(void);
 void delay(uint32_t);
 
 
 
 // GPIOA_ODR = 0x40020000UL + 0x14UL. Pin0=0,1=1,2=2;
-volatile uint32_t *pGPIOAOdr = (uint32_t *)(0x40020000UL + 0x14UL);
+// volatile uint32_t *pGPIOAOdr = (uint32_t *)(0x40020000UL + 0x14UL);
 // GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
-volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
+// volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
 
 
+// Required for FourDigitsLedDisplay
 static GPIOToLedRegisterDefinition_t  *g_ledOutput;
 
 
@@ -62,7 +60,8 @@ static GPIOToLedRegisterDefinition_t  *g_ledOutput;
 int main(void)
 {
 
-	init();
+	init_GPIO();
+	init_GPIO_FourDigitsLed();
     /* Loop forever */
 	uint32_t i = 9999;
 	for(;;)
@@ -81,7 +80,7 @@ int main(void)
 
 
 /**********************************************************************/
-void init(void)
+void init_GPIO(void)
 {
 	// CLOCK
 	// AHB1 = RCC_AHB1ENR, GPIOA EN = bit 1
@@ -91,10 +90,10 @@ void init(void)
 	*pRCCAhb1Enr|=(1<<0);
 
 	// GPIO = GPIOA = 0x40020000UL
-	// mode = ouptup,  Output type = 0 Output push-pull, speed = 00: Low speed
+	// mode = output,  Output type = 0 Output push-pull, speed = 00: Low speed
 	// GPIOA_MODER = 0x40020000UL + 0x00.  Val=01: General purpose output mode . Pin 0 = Bit [0,1] , Pin 1 = Bit [2,3] , Pin 3 = Bit [4,5]
 	volatile uint32_t * pGPIOAModer = (uint32_t *)(0x40020000UL + 0x00UL);
-	*pGPIOAModer &=  ~(0b000000); //clear first 6 for 0,1,2 pins
+	*pGPIOAModer &=  ~(0b111111); //clear first 6 for 0,1,2 pins    0b000000
 	*pGPIOAModer |=   (0b010101); //set 01 (output) for first 6 for 0,1,2 pins
 	// GPIOA_OTYPER = 0x40020000UL + 0x04.. Val = 0: Output push-pull (reset state). Pin0=0,1=1,2=2;
 	volatile uint32_t * pGPIOAOType = (uint32_t *)(0x40020000UL + 0x04UL);
@@ -104,6 +103,12 @@ void init(void)
 	volatile uint32_t *pGPIOAPuPd = (uint32_t *)(0x40020000UL + 0x0CUL);
 	*pGPIOAPuPd &= ~(0b111111); //clear
 	*pGPIOAPuPd |= ~(0b010101); //set 01: Pull-up
+
+}
+
+
+void init_GPIO_FourDigitsLed (void)
+{
 	// GPIOA_ODR = 0x40020000UL + 0x14UL. Pin0=0,1=1,2=2;
 	// GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
 
@@ -111,43 +116,13 @@ void init(void)
 	//volatile uint32_t *pGPIOAOdr = (uint32_t *)(0x40020000UL + 0x14UL);
 
 	// GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
-	volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
+	//volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
 	g_ledOutput = gpiotoled_init();
-	g_ledOutput->pGPIOABSRR = pGPIOABSRR;
+	g_ledOutput->pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL); //pGPIOABSRR;
 	g_ledOutput->output_pin_data = PIN_DATA;
 	g_ledOutput->output_pin_shift_clock = PIN_SHIFT_CLOCK;
 	g_ledOutput->output_pin_storage_clock = PIN_STORAGE_CLOCK;
 }
-
-/*
- * **********************************************************************
- * Deprecated/ Replaced by FourDigitsLedDisplay.h
- *
- * *********************************************************************/
-void write_pin___(uint8_t pin, uint8_t low_high)
-{
-	if      (low_high==BITLOW ){ *pGPIOABSRR |= (0b1 << (16 + pin));} // reset
-	else if (low_high==BITHIGH){ *pGPIOABSRR |= (0b1 << (0  + pin));} // set
-}
-
-void write_bit__(uint8_t low_high)
-{
-	write_pin___(PIN_DATA , low_high);
-}
-
-void write_shift_clock__(uint8_t low_high)
-{
-	write_pin___(PIN_SHIFT_CLOCK , low_high);
-}
-
-void write_storage_clock__(uint8_t low_high)
-{
-	write_pin___(PIN_STORAGE_CLOCK , low_high);
-}
-
-
-
-
 
 
 /**********************************************************************/

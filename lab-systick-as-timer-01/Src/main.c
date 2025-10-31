@@ -22,8 +22,150 @@
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
+
+#include <FourDigitsLedDisplay.h>
+
+
+#define PIN_DATA 			2		//SDO
+#define PIN_SHIFT_CLOCK 	1		//SCLK
+#define PIN_STORAGE_CLOCK 	0		//LOAD
+
+// Required for FourDigitsLedDisplay
+static GPIOToLedRegisterDefinition_t  *g_ledOutput;
+
+
+
+void init_rtc(void);
+void init_systick(void);
+void init_GPIO(void);
+void init_GPIO_FourDigitsLed(void);
+void delay(uint32_t);
+
+
+
+uint32_t g_tick = 0;
+
 int main(void)
 {
+	init_systick();
+	init_rtc();
+	init_GPIO();
+	init_GPIO_FourDigitsLed();
     /* Loop forever */
-	for(;;);
+
+	// Reduce flickering
+	uint32_t prev_displayed_mm = 0;
+	uint32_t prev_displayed_ss = 0;
+	for(;;)
+	{
+		uint32_t current_tick = g_tick;
+
+		uint32_t ss = (current_tick / 1000U) % 60;
+		uint32_t mm = (current_tick / 1000U) / 60;
+
+		if (prev_displayed_ss != ss || prev_displayed_mm != mm)
+		{
+
+			gpiotoled_blast_time(mm, ss);
+
+			prev_displayed_ss = ss;
+			prev_displayed_mm = mm;
+		}
+		delay(500000);
+	};
 }
+
+
+
+
+void init_systick(void)
+{
+	//Program reload value. SYST_RVR Reload Value Register. Value to load into the SYST_CVR register when the counter is enabled and when it reaches 0
+	//0xE000E014 SYST_RVR
+	uint32_t *pSystRVR = (uint32_t*)0xE000E014;
+	// Internal RC = 16 MHz
+	// 1mz = 1 KHz =Timer count MHz / Reload value = 16 MHz / Reload value. Reload value = 16 MHz/1 KHz = 16 000 = 0x3E80
+	*pSystRVR = 0x00FFFFFFU & 16000U; // add safety mask for 8 upper bits (24 bit register)
+
+	//Clear current value. SYST_CVR
+	//0xE000E018 SYST_CVR
+	// reset SYST_CVR : A write of any value clears the field to 0, and also clears the SYST_CSR COUNTFLAG bit to 0.
+	uint32_t *pSystCVR = (uint32_t*)0xE000E018;
+	*pSystCVR = 0x0U ; // set to 0 / reset
+
+	//Program Control and Status register.
+	//0xE000E010 SYST_CSR
+	// SYST_CSR ENABLE[0]=1/Enable;
+	//TICKINT[1]=Enables SysTick exception request=1/counting down to zero asserts the SysTick exception request.;
+	//CLKSOURCE[2]=1 = processor clock
+	// reset - see above - reset while writing to SYST_CVR
+	uint32_t *pSystCSR = (uint32_t*)0xE000E010;
+	*pSystCSR |= (0x1U<<2); // CLKSOURCE [2]=1 Processor clock \ internal
+	*pSystCSR |= (0x1U<<1); // TICKINT [1]= 1 counting down to zero asserts the SysTick exception request.
+	*pSystCSR |= (0x1U<<0); // ENABLE [0]=1 Enable
+}
+void init_rtc(void)
+{
+
+}
+
+
+
+void init_GPIO(void)
+{
+	// CLOCK
+	// AHB1 = RCC_AHB1ENR, GPIOA EN = bit 1
+	// RCC = 0x40020000UL + 0x3800UL; RCC_AHB1ENR (RCC AHB1 peripheral clock enable register) = RCC + 0x30
+	volatile uint32_t *pRCCAhb1Enr = 	(uint32_t *)(0x40020000UL + 0x3800UL + 0x30UL);
+	// RCC_AHB1ENR Enable GPIOA (bit 1)
+	*pRCCAhb1Enr|=(1<<0);
+
+	// GPIO = GPIOA = 0x40020000UL
+	// mode = output,  Output type = 0 Output push-pull, speed = 00: Low speed
+	// GPIOA_MODER = 0x40020000UL + 0x00.  Val=01: General purpose output mode . Pin 0 = Bit [0,1] , Pin 1 = Bit [2,3] , Pin 3 = Bit [4,5]
+	volatile uint32_t * pGPIOAModer = (uint32_t *)(0x40020000UL + 0x00UL);
+	*pGPIOAModer &=  ~(0b111111); //clear first 6 for 0,1,2 pins    0b000000
+	*pGPIOAModer |=   (0b010101); //set 01 (output) for first 6 for 0,1,2 pins
+	// GPIOA_OTYPER = 0x40020000UL + 0x04.. Val = 0: Output push-pull (reset state). Pin0=0,1=1,2=2;
+	volatile uint32_t * pGPIOAOType = (uint32_t *)(0x40020000UL + 0x04UL);
+	*pGPIOAOType &= ~(0b111); //clear
+	*pGPIOAOType |=  (0b000); //set 0 (output) for pins 0,1,2 (bit 0,1,2)
+	// GPIOx_PUPDR = 0x40020000UL + 0x0C.  PUPDR2[1:0] PUPDR1[1:0] PUPDR0[1:0]/ 01: Pull-up 10: Pull-down
+	volatile uint32_t *pGPIOAPuPd = (uint32_t *)(0x40020000UL + 0x0CUL);
+	*pGPIOAPuPd &= ~(0b111111); //clear
+	*pGPIOAPuPd |= ~(0b010101); //set 01: Pull-up
+
+}
+
+
+void init_GPIO_FourDigitsLed (void)
+{
+	// GPIOA_ODR = 0x40020000UL + 0x14UL. Pin0=0,1=1,2=2;
+	// GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
+
+	// GPIOA_ODR = 0x40020000UL + 0x14UL. Pin0=0,1=1,2=2;
+	//volatile uint32_t *pGPIOAOdr = (uint32_t *)(0x40020000UL + 0x14UL);
+
+	// GPIOA_BSRR = 0x40020000UL + 0x18UL; SET Pin0=0,1=1,2=2; RESET Pin0=bit16,1=17,2=18;
+	//volatile uint32_t *pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL);
+	g_ledOutput = gpiotoled_init();
+	g_ledOutput->pGPIOABSRR = (uint32_t *)(0x40020000UL + 0x18UL); //pGPIOABSRR;
+	g_ledOutput->output_pin_data = PIN_DATA;
+	g_ledOutput->output_pin_shift_clock = PIN_SHIFT_CLOCK;
+	g_ledOutput->output_pin_storage_clock = PIN_STORAGE_CLOCK;
+}
+
+
+
+/**********************************************************************/
+void SysTick_Handler(void)
+{
+	g_tick++;
+}
+
+/**********************************************************************/
+void delay(uint32_t time)
+{
+	for (uint32_t i =0 ; i< time; i++);
+}
+
