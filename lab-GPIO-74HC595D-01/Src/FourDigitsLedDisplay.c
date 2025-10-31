@@ -216,7 +216,18 @@ void blast_uint___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint
 	push_four_section_bitmap___(bits_a, bits_b, bits_c, bits_d);
 }
 
-
+void blast_time___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint_d)
+{
+	// clear
+	push_four_section_clear___();
+	// blast
+	uint8_t bits_a = char_map_translate_uint___(uint_a);
+	uint8_t bits_b = char_map_translate_uint___(uint_b);
+	bits_b |= char_map_dotmask;
+	uint8_t bits_c = char_map_translate_uint___(uint_c);
+	uint8_t bits_d = char_map_translate_uint___(uint_d);
+	push_four_section_bitmap___(bits_a, bits_b, bits_c, bits_d);
+}
 
 
 
@@ -276,20 +287,21 @@ void gpiotoled_blast_uint(uint32_t num)
     if (dummy>9999 || dummy<0)
     {
     	gpiotoled_blast_error();
+    	return;
     }
     else
     {
         if (dummy>999)			{a = dummy/1000;dummy=dummy-(dummy/1000)*1000;}
-        else a = char_map_bitfield_clear;
+        else a = char_map_bitfield_clear; //TODO !!!! error - nomask but number
 
         if (dummy>99 || num>=99)	{ b = dummy / 100; dummy=dummy-(dummy/100)*100;}
-        else b = char_map_bitfield_clear;
+        else b = char_map_bitfield_clear; //TODO !!!! error - nomask but number
 
         if (dummy>9 || num>=9)	{ c= dummy/10;dummy=dummy-(dummy/10)*10;}
-        else c = char_map_bitfield_clear;
+        else c = char_map_bitfield_clear; //TODO !!!! error - nomask but number
 
         if (dummy>=0)			{ d = dummy;}
-        else d = char_map_bitfield_clear;
+        else d = char_map_bitfield_clear; //TODO !!!! error - nomask but number
     };
 
 	//gpiotoled_clear();
@@ -298,3 +310,35 @@ void gpiotoled_blast_uint(uint32_t num)
 
 }
 
+
+
+
+
+void gpiotoled_blast_time(uint8_t aa, uint8_t bb)
+{
+    int dummy;
+    uint8_t a,b,c,d;
+    if (aa>99 || aa<0 || bb>99 || bb<0)
+    {
+    	gpiotoled_blast_error();
+    	return;
+    }
+    else
+    {
+    	dummy = aa;
+        if (dummy>9 || aa>=9)	{ a = dummy/10;dummy=dummy-(dummy/10)*10;}
+        else a = 0;
+        if (dummy>=0)			{ b = dummy;}
+        else b = 0;
+
+    	dummy = bb;
+        if (dummy>9 || bb>=9)	{ c = dummy/10;dummy=dummy-(dummy/10)*10;}
+        else c = 0;
+        if (dummy>=0)			{ d = dummy;}
+        else d = 0;
+
+    };
+
+	blast_time___(a,b,c,d);
+
+}

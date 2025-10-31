@@ -80,7 +80,7 @@ void gpiotoled_clear(void);
 void gpiotoled_bright(void);
 void gpiotoled_blast_error(void);
 void gpiotoled_blast_uint(uint32_t n);
-void gpiotoled_blast_time(uint8_t hh, uint8_t mm);
+void gpiotoled_blast_time(uint8_t aa, uint8_t bb);
 
 
 
