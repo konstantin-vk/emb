@@ -211,10 +211,6 @@ void push_four_section_bright___(void)
 
 void blast_bitmap___(uint8_t bitmask_a , uint8_t bitmask_b ,uint8_t bitmask_c ,uint8_t bitmask_d)
 {
-	// clear
-	//push_four_section_bitmap___(char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear);
-	push_four_section_clear___();
-	// blast
 	push_four_section_bitmap___(bitmask_a, bitmask_b, bitmask_c, bitmask_d);
 }
 
