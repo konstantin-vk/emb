@@ -54,8 +54,8 @@ int main(void)
     /* Loop forever */
 
 	// Reduce flickering
-	uint32_t prev_displayed_mm = 0;
-	uint32_t prev_displayed_ss = 0;
+	//uint32_t prev_displayed_mm = 0;
+	//uint32_t prev_displayed_ss = 0;
 	for(;;)
 	{
 		uint32_t current_tick = g_tick;
@@ -63,14 +63,15 @@ int main(void)
 		uint32_t ss = (current_tick / 1000U) % 60;
 		uint32_t mm = (current_tick / 1000U) / 60;
 
-		if (prev_displayed_ss != ss || prev_displayed_mm != mm)
-		{
+		gpiotoled_blast_time(mm, ss);
 
-			gpiotoled_blast_time(mm, ss);
 
-			prev_displayed_ss = ss;
-			prev_displayed_mm = mm;
-		}
+		//if (prev_displayed_ss != ss || prev_displayed_mm != mm)
+		//{
+		//	gpiotoled_blast_time(mm, ss);
+		//	prev_displayed_ss = ss;
+		//	prev_displayed_mm = mm;
+		//}
 		delay(500000);
 	};
 }

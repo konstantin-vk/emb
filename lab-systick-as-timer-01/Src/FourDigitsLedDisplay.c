@@ -20,6 +20,10 @@
 static GPIOToLedRegisterDefinition_t *g_gpio_output_register;
 
 
+// supress flickering by supressing update scrin if displayed value hasnt changed
+static uint8_t displayed_bitfield[4];
+
+
 /*
  * *********************************
  *
@@ -135,7 +139,6 @@ void push_storage_clock_pin___(uint8_t bit_high_low)
 }
 
 
-// TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 void push_section_bitmap___(uint8_t bits )
 {
 	uint8_t bit ;
@@ -154,14 +157,38 @@ void push_section_bitmap___(uint8_t bits )
 }
 
 
+// handle section invertion
+void push_four_section_bitmap_raw___(uint8_t bits_a , uint8_t bits_b ,uint8_t bits_c ,uint8_t bits_d)
+{
+		//update screen
+		push_section_bitmap___(bits_d);
+		push_section_bitmap___(bits_c);
+		push_section_bitmap___(bits_b);
+		push_section_bitmap___(bits_a);
+}
+
+
+//handle flickering
 void push_four_section_bitmap___(uint8_t bits_a , uint8_t bits_b ,uint8_t bits_c ,uint8_t bits_d)
 {
 	//blast string
 	// Attention = inversion !!!!!!!!!!!!!!
-	push_section_bitmap___(bits_d);
-	push_section_bitmap___(bits_c);
-	push_section_bitmap___(bits_b);
-	push_section_bitmap___(bits_a);
+	// suppress flickering
+	if ( displayed_bitfield[0]!=bits_a ||
+			displayed_bitfield[1]!=bits_b ||
+			displayed_bitfield[2]!=bits_c ||
+			displayed_bitfield[3]!=bits_d )
+	{
+		//save
+		displayed_bitfield[0] = bits_a ;
+		displayed_bitfield[1] = bits_b ;
+		displayed_bitfield[2] = bits_c ;
+		displayed_bitfield[3] = bits_d ;
+		//update screen
+		push_four_section_bitmap___(char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear);
+		push_four_section_bitmap_raw___(bits_a, bits_b, bits_c, bits_d);
+
+	}
 }
 
 void push_four_section_clear___(void)
@@ -194,9 +221,6 @@ void blast_bitmap___(uint8_t bitmask_a , uint8_t bitmask_b ,uint8_t bitmask_c ,u
 
 void blast_ascii___(uint8_t ascii_a , uint8_t ascii_b ,uint8_t ascii_c ,uint8_t ascii_d)
 {
-	// clear
-	push_four_section_clear___();
-	// blast
 	uint8_t bits_a = char_map_translate_ascii___(ascii_a);
 	uint8_t bits_b = char_map_translate_ascii___(ascii_b);
 	uint8_t bits_c = char_map_translate_ascii___(ascii_c);
@@ -206,9 +230,6 @@ void blast_ascii___(uint8_t ascii_a , uint8_t ascii_b ,uint8_t ascii_c ,uint8_t 
 
 void blast_uint___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint_d)
 {
-	// clear
-	push_four_section_clear___();
-	// blast
 	uint8_t bits_a = char_map_translate_uint___(uint_a);
 	uint8_t bits_b = char_map_translate_uint___(uint_b);
 	uint8_t bits_c = char_map_translate_uint___(uint_c);
@@ -218,9 +239,6 @@ void blast_uint___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint
 
 void blast_time___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint_d)
 {
-	// clear
-	push_four_section_clear___();
-	// blast
 	uint8_t bits_a = char_map_translate_uint___(uint_a);
 	uint8_t bits_b = char_map_translate_uint___(uint_b);
 	bits_b |= char_map_dotmask;
