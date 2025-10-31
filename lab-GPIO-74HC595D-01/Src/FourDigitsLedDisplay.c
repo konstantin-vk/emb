@@ -33,6 +33,7 @@ const uint8_t char_map_base = 48; 						// ASCII number for 0 (Zero)
 const uint8_t char_map_bitfield_err    = 0b11111111UL ; 	// indicate error as all leds are highlited
 const uint8_t char_map_bitfield_clear  = 0b00000000UL ;
 const uint8_t char_map_bitfield_bright = 0b01111111UL ;
+const uint8_t char_map_dotmask = 0b10000000UL ;
 
 // Convert Numbers to Led Display pin signal level
 const uint8_t char_map[10] =
@@ -194,19 +195,25 @@ void blast_bitmap___(uint8_t bitmask_a , uint8_t bitmask_b ,uint8_t bitmask_c ,u
 void blast_ascii___(uint8_t ascii_a , uint8_t ascii_b ,uint8_t ascii_c ,uint8_t ascii_d)
 {
 	// clear
-	//push_four_section_bitmap___(char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear, char_map_bitfield_clear);
 	push_four_section_clear___();
 	// blast
-	uint8_t bits_a = char_map_translate_uint___(ascii_a);
-	uint8_t bits_b = char_map_translate_uint___(ascii_b);
-	uint8_t bits_c = char_map_translate_uint___(ascii_c);
-	uint8_t bits_d = char_map_translate_uint___(ascii_d);
+	uint8_t bits_a = char_map_translate_ascii___(ascii_a);
+	uint8_t bits_b = char_map_translate_ascii___(ascii_b);
+	uint8_t bits_c = char_map_translate_ascii___(ascii_c);
+	uint8_t bits_d = char_map_translate_ascii___(ascii_d);
 	push_four_section_bitmap___(bits_a, bits_b, bits_c, bits_d);
-//	push_four_section_bitmap___(char_map_translate___(ascii_a),
-//			char_map_translate___(ascii_b),
-//			char_map_translate___(ascii_c),
-//			char_map_translate___(ascii_d)
-//			);
+}
+
+void blast_uint___(uint8_t uint_a , uint8_t uint_b ,uint8_t uint_c ,uint8_t uint_d)
+{
+	// clear
+	push_four_section_clear___();
+	// blast
+	uint8_t bits_a = char_map_translate_uint___(uint_a);
+	uint8_t bits_b = char_map_translate_uint___(uint_b);
+	uint8_t bits_c = char_map_translate_uint___(uint_c);
+	uint8_t bits_d = char_map_translate_uint___(uint_d);
+	push_four_section_bitmap___(bits_a, bits_b, bits_c, bits_d);
 }
 
 
@@ -285,8 +292,8 @@ void gpiotoled_blast_uint(uint32_t num)
         else d = char_map_bitfield_clear;
     };
 
-	gpiotoled_clear();
-	blast_ascii___(a,b,c,d);
+	//gpiotoled_clear();
+	blast_uint___(a,b,c,d);
 
 
 }
