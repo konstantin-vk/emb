@@ -199,7 +199,7 @@ void push_four_section_bitmap___(void)
 
 		// Update screen :
 		// Clear
-		push_four_section_bitmap_impl___(char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear);
+		//push_four_section_bitmap_impl___(char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear,char_map_bitfield_clear);
 		// Show - MSB should be first
 		push_four_section_bitmap_impl___(displayed_bitfield[0],displayed_bitfield[1],displayed_bitfield[2],displayed_bitfield[3]);
 
