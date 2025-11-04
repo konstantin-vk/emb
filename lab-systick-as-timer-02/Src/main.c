@@ -159,7 +159,8 @@ void init_GPIO_FourDigitsLed (void)
 void init_pendSV(void)
 {
 	// Set priority
-	//SHPR3 bit Bits 23:16 PRI_14: Priority of system handler 14, PendSV Bits 15:0 Reserved, must be kept cleared
+	// SHPR3 System handler priority registers
+	// bit Bits 23:16 PRI_14: Priority of system handler 14, PendSV Bits 15:0 Reserved, must be kept cleared
 	uint32_t *pSHPR3 = (uint32_t *)0xE000ED20;
 	*pSHPR3 &= ~(0xFF << 16); 	// clear
 	//*pSHPR3 |= (15 << 16); 		// set priority 15 - lowest
@@ -190,6 +191,7 @@ void SysTick_Handler(void)
 	g_tick++;
 	gpiotoled2_set_millis(g_tick);
 
+	// Call PendSV
 	//SCB. Interrupt control and state register (ICSR)
 	//Address offset: 0x04
 	//Bit 28 PENDSVSET: PendSV set-pending bit.
